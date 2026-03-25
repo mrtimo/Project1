@@ -34,8 +34,9 @@ Your Python code must use the `sqlite3` library to perform the following:
 
 ### 3. Submission Format
 You must turn in **one PDF or .doc file** that includes:
-1.  A brief description of why you chose your topic.
-2.  A **clickable link** to your Google Colab notebook. 
+1.  A brief description of why you chose your topic, and a reflection on what you learned. (3-5 sentences)
+2.  Copy and paste you code in the .doc file
+3.  A **clickable link** to your Google Colab notebook. 
     *   *Note:* Ensure your Colab sharing settings are set to **"Anyone with the link can view"** so I can grade it!
 
 ---

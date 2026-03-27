@@ -42,9 +42,10 @@ Pre-load at least **3 items** in each entity table and at least **5 rows** in th
 
 ## What to Submit
 
-Submit a word document / PDF with the following:
-Submit your **Google Colab notebook link** (.ipynb) with all cells run and output visible. 
-Screenshots of your forms. Screenshots of your 3 tables in retool. 
+- Submit a word document / PDF with the following:
+- Submit your **Google Colab notebook link** (.ipynb) with all cells run and output visible. 
+- Screenshots of your forms. 
+- Screenshots of your 3 tables in retool. 
 
 The grader should be able to see your forms, your starter data, and evidence that you added at least one new item and one new relationship using the forms.
 

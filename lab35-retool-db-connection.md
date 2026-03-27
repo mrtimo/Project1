@@ -54,9 +54,10 @@ The most important thing is that our data will now **persist** — it will not b
 
 1. Go to [https://retool.com](https://retool.com) and click **Sign Up** (or **Get Started**).
 2. **Sign up using your `@zagmail.gonzaga.edu` email address.**
-3. When it asks for an organization name, you can put in whatever you like (your name, "BMIS490", etc.).
-4. Continue filling out the sign-up form. For any questions about your role or what you are building, just pick whatever seems reasonable — it does not matter for our purposes.
-5. If you see an intro tutorial or walkthrough, you can **press "Skip"** to get past it.
+3. ***Do not join someone else's organization - create your own organization.*** - otherwise you will not have database access.
+4. When it asks for an organization name, you can put in whatever you like (your name, "BMIS490", etc.).
+5. Continue filling out the sign-up form. For any questions about your role or what you are building, just pick whatever seems reasonable — it does not matter for our purposes.
+6. If you see an intro tutorial or walkthrough, you can **press "Skip"** to get past it.
 
 ---
 

@@ -2,9 +2,11 @@
 
 ## Overview
 
-In Lab 1 you built a form. In Lab 3 you built a database. In Lab 3.5 you set up a cloud PostgreSQL database. Now you'll connect them — your form will write to and read from your database. No API in between, no server to run. Just: button click → SQL command → display the results.
+In Lab 1 you built a form. In Lab 3 you learned SQL. In Lab 3.5 you set up a cloud PostgreSQL database on Retool. Now you'll connect them — your form will write to and read from your **real cloud database**. No API in between, no server to run. Just: button click → SQL command → display the results.
 
-But we're going to go further than a single table. Real applications almost never have just one table. In this lab, we'll build **three tables** that work together using a **many-to-many relationship** — one of the most common and important patterns in database design.
+Because your database lives in the cloud, **your data will persist** even when Colab disconnects. You can close your laptop, come back tomorrow, and your data will still be there.
+
+We're also going to go further than a single table. Real applications almost never have just one table. In this lab, we'll build **three tables** that work together using a **many-to-many relationship** — one of the most common and important patterns in database design.
 
 **Time:** ~60 minutes
 
@@ -62,39 +64,72 @@ Understanding this pattern is essential for building real systems.
 
 ---
 
-## Part 2: Set Up the Database
+## Part 2: Connect to Your Database
 
-Open a **new Google Colab notebook**. We'll build a fresh database with three tables.
+Open a **new Google Colab notebook**. We'll connect to your Retool PostgreSQL database and build three tables.
 
-> **Note on SQLite vs PostgreSQL:** In this lab, we use **SQLite** so everything runs locally in Colab with no setup. The SQL is nearly identical to what you'd run against your Retool PostgreSQL database. The main differences are minor syntax things (e.g., SQLite uses `AUTOINCREMENT` while PostgreSQL uses `SERIAL`). The concepts — tables, foreign keys, junction tables — are exactly the same. Once you have this working, you could point the same logic at your PostgreSQL database by swapping the connection.
+### Step 1: Install the PostgreSQL library
 
-**Cell 1 — Create all three tables:**
+**Cell 1 — Install psycopg2:**
 
 ```python
-import sqlite3
+!pip install psycopg2-binary
+```
 
-# Create a fresh database
-conn = sqlite3.connect("university.db")
+### Step 2: Enable your database secret
+
+In Lab 3.5, you saved your Retool database connection URL as a Colab Secret called `DB_URL`. If you're in a new notebook, you need to make sure it's available:
+
+1. Click the **🔑 Secrets** icon (key icon) in the left sidebar.
+2. You should see `DB_URL` listed. If the **"Notebook access"** toggle is off, **turn it on** for this notebook.
+3. If you don't see `DB_URL` at all, go back to Retool, copy your connection URL, and add it as a new secret (see Lab 3.5 for instructions).
+
+### Step 3: Connect to the database
+
+**Cell 2 — Connect to your Retool PostgreSQL database:**
+
+```python
+import psycopg2
+from google.colab import userdata
+
+# Get the connection URL from Colab Secrets (NEVER paste it directly in code!)
+db_url = userdata.get('DB_URL')
+
+# Connect to the database
+conn = psycopg2.connect(db_url)
+conn.autocommit = True
 cursor = conn.cursor()
 
+print("Connected to your PostgreSQL database!")
+```
+
+> **Why `autocommit = True`?** In PostgreSQL, if a SQL error occurs during a transaction, all subsequent commands will fail until you explicitly roll back. Setting `autocommit = True` means each command runs independently, so one error won't break everything that follows. This makes it much easier to experiment in a notebook. In a production app you'd manage transactions more carefully, but for learning this is the right setting.
+
+If you see "Connected to your PostgreSQL database!" you're good to go. This is the same database you set up in Lab 3.5 — but now we're going to build real tables and forms on top of it.
+
+### Step 4: Create all three tables
+
+**Cell 3 — Create the tables:**
+
+```python
 # --- Table 1: Students ---
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        major TEXT NOT NULL,
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        major VARCHAR(100) NOT NULL,
         year INTEGER NOT NULL,
-        email TEXT,
-        gpa REAL
+        email VARCHAR(200),
+        gpa NUMERIC(3, 2)
     )
 """)
 
 # --- Table 2: Courses ---
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS courses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        course_name TEXT NOT NULL,
-        instructor TEXT NOT NULL,
+        id SERIAL PRIMARY KEY,
+        course_name VARCHAR(200) NOT NULL,
+        instructor VARCHAR(100) NOT NULL,
         credits INTEGER NOT NULL
     )
 """)
@@ -102,90 +137,122 @@ cursor.execute("""
 # --- Table 3: Enrollments (the junction table) ---
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS enrollments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        course_id INTEGER NOT NULL,
-        enrolled_date TEXT DEFAULT CURRENT_DATE,
-        FOREIGN KEY (student_id) REFERENCES students(id),
-        FOREIGN KEY (course_id) REFERENCES courses(id)
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id),
+        course_id INTEGER NOT NULL REFERENCES courses(id),
+        enrolled_date DATE DEFAULT CURRENT_DATE
     )
 """)
 
-conn.commit()
 print("All three tables created!")
 ```
 
+Notice a few differences from the SQLite we used in Lab 3:
+
+| SQLite | PostgreSQL | Why |
+|--------|-----------|-----|
+| `INTEGER PRIMARY KEY AUTOINCREMENT` | `SERIAL PRIMARY KEY` | PostgreSQL's way of auto-incrementing IDs |
+| `TEXT` | `VARCHAR(100)` | PostgreSQL lets you set maximum lengths |
+| `REAL` | `NUMERIC(3, 2)` | More precise decimal numbers |
+| `FOREIGN KEY (...) REFERENCES ...` (separate line) | `REFERENCES students(id)` (inline) | Both work, inline is more concise |
+
+The **concepts are identical** — tables, primary keys, foreign keys, junction tables. Only the syntax is slightly different.
+
 Look at the `enrollments` table carefully. It has two **foreign keys** — `student_id` points to the `students` table and `course_id` points to the `courses` table. Each row says "this student is enrolled in this course on this date."
 
-**Cell 2 — Add starter data:**
+### Step 5: Add starter data
+
+**Cell 4 — Insert starter data:**
 
 ```python
-# Insert some students
-starter_students = [
-    ("Alice Chen", "MIS", 3, "chen@zagmail.gonzaga.edu", 3.8),
-    ("Bob Martinez", "Finance", 2, "martinez@zagmail.gonzaga.edu", 3.2),
-    ("Carol Davis", "Marketing", 4, "davis@zagmail.gonzaga.edu", 3.5),
-    ("Derek Johnson", "MIS", 2, "johnson@zagmail.gonzaga.edu", 3.6),
-]
+# Check if we already have data (so we don't duplicate on re-runs)
+cursor.execute("SELECT COUNT(*) FROM students")
+count = cursor.fetchone()[0]
 
-cursor.executemany("""
-    INSERT INTO students (name, major, year, email, gpa)
-    VALUES (?, ?, ?, ?, ?)
-""", starter_students)
+if count == 0:
+    # Insert some students
+    starter_students = [
+        ("Alice Chen", "MIS", 3, "chen@zagmail.gonzaga.edu", 3.8),
+        ("Bob Martinez", "Finance", 2, "martinez@zagmail.gonzaga.edu", 3.2),
+        ("Carol Davis", "Marketing", 4, "davis@zagmail.gonzaga.edu", 3.5),
+        ("Derek Johnson", "MIS", 2, "johnson@zagmail.gonzaga.edu", 3.6),
+    ]
 
-# Insert some courses
-starter_courses = [
-    ("BMIS 490 - Systems Analysis", "Prof. Olsen", 3),
-    ("BMIS 340 - Database Management", "Prof. Olsen", 3),
-    ("ACCT 201 - Intro to Accounting", "Prof. Williams", 3),
-    ("MKTG 310 - Marketing Research", "Prof. Garcia", 3),
-]
+    for s in starter_students:
+        cursor.execute("""
+            INSERT INTO students (name, major, year, email, gpa)
+            VALUES (%s, %s, %s, %s, %s)
+        """, s)
 
-cursor.executemany("""
-    INSERT INTO courses (course_name, instructor, credits)
-    VALUES (?, ?, ?)
-""", starter_courses)
+    # Insert some courses
+    starter_courses = [
+        ("BMIS 490 - Systems Analysis", "Prof. Olsen", 3),
+        ("BMIS 340 - Database Management", "Prof. Olsen", 3),
+        ("ACCT 201 - Intro to Accounting", "Prof. Williams", 3),
+        ("MKTG 310 - Marketing Research", "Prof. Garcia", 3),
+    ]
 
-# Enroll some students in courses
-starter_enrollments = [
-    (1, 1),  # Alice in BMIS 490
-    (1, 2),  # Alice in BMIS 340
-    (2, 3),  # Bob in ACCT 201
-    (3, 4),  # Carol in MKTG 310
-    (3, 1),  # Carol in BMIS 490
-    (4, 1),  # Derek in BMIS 490
-    (4, 2),  # Derek in BMIS 340
-]
+    for c in starter_courses:
+        cursor.execute("""
+            INSERT INTO courses (course_name, instructor, credits)
+            VALUES (%s, %s, %s)
+        """, c)
 
-cursor.executemany("""
-    INSERT INTO enrollments (student_id, course_id)
-    VALUES (?, ?)
-""", starter_enrollments)
+    # Get the actual IDs that were assigned
+    cursor.execute("SELECT id FROM students ORDER BY id")
+    student_ids = [row[0] for row in cursor.fetchall()]
 
-conn.commit()
-print(f"Loaded {len(starter_students)} students, {len(starter_courses)} courses, and {len(starter_enrollments)} enrollments.")
+    cursor.execute("SELECT id FROM courses ORDER BY id")
+    course_ids = [row[0] for row in cursor.fetchall()]
+
+    # Enroll some students in courses
+    starter_enrollments = [
+        (student_ids[0], course_ids[0]),  # Alice in BMIS 490
+        (student_ids[0], course_ids[1]),  # Alice in BMIS 340
+        (student_ids[1], course_ids[2]),  # Bob in ACCT 201
+        (student_ids[2], course_ids[3]),  # Carol in MKTG 310
+        (student_ids[2], course_ids[0]),  # Carol in BMIS 490
+        (student_ids[3], course_ids[0]),  # Derek in BMIS 490
+        (student_ids[3], course_ids[1]),  # Derek in BMIS 340
+    ]
+
+    for e in starter_enrollments:
+        cursor.execute("""
+            INSERT INTO enrollments (student_id, course_id)
+            VALUES (%s, %s)
+        """, e)
+
+    print(f"Loaded {len(starter_students)} students, {len(starter_courses)} courses, and {len(starter_enrollments)} enrollments.")
+else:
+    print(f"Data already exists ({count} students found). Skipping starter data.")
 ```
 
-**Cell 3 — Verify each table:**
+> **Why check first?** Because your database is persistent, running this cell a second time would duplicate all the data. The `if count == 0` check prevents that. This is a real-world pattern — you always want to be careful about duplicate inserts.
+
+> **Why not hardcode IDs like `(1, 1)` for enrollments?** In PostgreSQL, `SERIAL` IDs don't always start at 1 — especially if you've created and deleted rows before. By querying the actual IDs after inserting, we make sure the enrollments point to the right students and courses regardless of what ID numbers PostgreSQL assigned.
+
+**Cell 5 — Verify each table:**
 
 ```python
 print("=== STUDENTS ===")
-cursor.execute("SELECT * FROM students")
+cursor.execute("SELECT * FROM students ORDER BY id")
 for row in cursor.fetchall():
     print(row)
 
 print("\n=== COURSES ===")
-cursor.execute("SELECT * FROM courses")
+cursor.execute("SELECT * FROM courses ORDER BY id")
 for row in cursor.fetchall():
     print(row)
 
 print("\n=== ENROLLMENTS ===")
-cursor.execute("SELECT * FROM enrollments")
+cursor.execute("SELECT * FROM enrollments ORDER BY id")
 for row in cursor.fetchall():
     print(row)
 ```
 
 You should see four students, four courses, and seven enrollments. Notice how the enrollments table just stores pairs of IDs — it's lightweight and flexible.
+
+**Now go to Retool and check!** Open your Retool Database in your browser and refresh the page. You should see your three new tables — `students`, `courses`, and `enrollments` — with all the data you just inserted from Colab. This is the power of a cloud database: you can add data from code and see it in a visual tool.
 
 ---
 
@@ -193,7 +260,7 @@ You should see four students, four courses, and seven enrollments. Notice how th
 
 The real payoff of this design is the **JOIN** — a SQL command that combines data from multiple tables. Instead of seeing `student_id: 1, course_id: 2`, we can see `Alice Chen is enrolled in BMIS 340`.
 
-**Cell 4 — See who is enrolled in what:**
+**Cell 6 — See who is enrolled in what:**
 
 ```python
 print("=== ENROLLMENT ROSTER ===")
@@ -214,7 +281,7 @@ for name, course, date in cursor.fetchall():
 
 This single query reaches across all three tables and gives us a human-readable enrollment roster. This is the exact same kind of query that runs behind the scenes when you log into Zagweb and see your schedule.
 
-**Cell 5 — See all students in a specific course:**
+**Cell 7 — See all students in a specific course:**
 
 ```python
 course_name = "BMIS 490 - Systems Analysis"
@@ -224,7 +291,7 @@ cursor.execute("""
     FROM enrollments
     JOIN students ON enrollments.student_id = students.id
     JOIN courses ON enrollments.course_id = courses.id
-    WHERE courses.course_name = ?
+    WHERE courses.course_name = %s
     ORDER BY students.name
 """, (course_name,))
 
@@ -233,7 +300,7 @@ for name, major, year in cursor.fetchall():
     print(f"  {name} ({major}, Year {year})")
 ```
 
-**Cell 6 — See all courses a specific student is taking:**
+**Cell 8 — See all courses a specific student is taking:**
 
 ```python
 student_name = "Alice Chen"
@@ -243,7 +310,7 @@ cursor.execute("""
     FROM enrollments
     JOIN courses ON enrollments.course_id = courses.id
     JOIN students ON enrollments.student_id = students.id
-    WHERE students.name = ?
+    WHERE students.name = %s
     ORDER BY courses.course_name
 """, (student_name,))
 
@@ -260,7 +327,7 @@ Now let's build forms with widgets that let you manage all three tables and the 
 
 ### Section A: Student Management Form
 
-**Cell 7 — Add and view students:**
+**Cell 9 — Add and view students:**
 
 ```python
 import ipywidgets as widgets
@@ -305,10 +372,9 @@ def on_add_student(b):
             return
         cursor.execute("""
             INSERT INTO students (name, major, year, email, gpa)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (name_input.value, major_dropdown.value, year_slider.value,
               email_input.value or None, gpa_slider.value))
-        conn.commit()
         print(f"Added: {name_input.value}")
         name_input.value = ""
         email_input.value = ""
@@ -332,7 +398,7 @@ refresh_students()
 
 ### Section B: Course Management Form
 
-**Cell 8 — Add and view courses:**
+**Cell 10 — Add and view courses:**
 
 ```python
 # ========================================
@@ -372,9 +438,8 @@ def on_add_course(b):
             return
         cursor.execute("""
             INSERT INTO courses (course_name, instructor, credits)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (course_name_input.value, instructor_input.value, credits_dropdown.value))
-        conn.commit()
         print(f"Added: {course_name_input.value}")
         course_name_input.value = ""
         instructor_input.value = ""
@@ -400,7 +465,7 @@ refresh_courses()
 
 This is where the many-to-many relationship comes to life. This form lets you pick a student and a course and connect them.
 
-**Cell 9 — Enroll students in courses:**
+**Cell 11 — Enroll students in courses:**
 
 ```python
 # ========================================
@@ -468,7 +533,7 @@ def on_enroll(b):
         # Check if already enrolled
         cursor.execute("""
             SELECT id FROM enrollments
-            WHERE student_id = ? AND course_id = ?
+            WHERE student_id = %s AND course_id = %s
         """, (student_id, course_id))
 
         if cursor.fetchone():
@@ -477,9 +542,8 @@ def on_enroll(b):
 
         cursor.execute("""
             INSERT INTO enrollments (student_id, course_id)
-            VALUES (?, ?)
+            VALUES (%s, %s)
         """, (student_id, course_id))
-        conn.commit()
         print(f"Enrolled successfully!")
     refresh_enrollments()
 
@@ -515,7 +579,7 @@ refresh_enrollments()
 
 This form lets you pick a course and see who is enrolled — exactly like an instructor looking at their class roster.
 
-**Cell 10 — View a course roster:**
+**Cell 12 — View a course roster:**
 
 ```python
 # ========================================
@@ -538,13 +602,13 @@ def on_view_roster(b):
             SELECT students.name, students.major, students.year, students.email
             FROM enrollments
             JOIN students ON enrollments.student_id = students.id
-            WHERE enrollments.course_id = ?
+            WHERE enrollments.course_id = %s
             ORDER BY students.name
         """, (course_id,))
         rows = cursor.fetchall()
 
         # Get course name for the header
-        cursor.execute("SELECT course_name FROM courses WHERE id = ?", (course_id,))
+        cursor.execute("SELECT course_name FROM courses WHERE id = %s", (course_id,))
         course_name = cursor.fetchone()[0]
 
         if not rows:
@@ -595,7 +659,7 @@ Here's what happens when you enroll a student in a course:
          ↓
 6. It runs: INSERT INTO enrollments (student_id, course_id) VALUES (1, 3)
          ↓
-7. conn.commit() saves the new enrollment
+7. The data is saved to your cloud PostgreSQL database
          ↓
 8. refresh_enrollments() runs a JOIN across all 3 tables:
    SELECT students.name, courses.course_name, enrollments.enrolled_date
@@ -608,6 +672,8 @@ Here's what happens when you enroll a student in a course:
 
 Notice that the `enrollments` table only stored two numbers: `1` and `3`. The JOIN is what turns those numbers back into "Alice Chen" and "ACCT 201." The actual student and course data only exists in one place — their own tables.
 
+**Try this:** After adding some data, go to **Retool Database** in your browser and refresh the page. You should see all the data you just added from Colab. Then close your Colab notebook, reopen it, reconnect to the database, and your data is still there. That's the whole point of a cloud database.
+
 ---
 
 ## Part 6: Your Turn — Challenges
@@ -618,15 +684,15 @@ Add a way to **remove an enrollment** (drop a course). You will need:
 
 1. A `widgets.BoundedIntText` for the enrollment ID to remove (you can see enrollment IDs in the enrollment list)
 2. A `widgets.Button` with description `"Drop Course"`, button_style `"danger"`, icon `"unlink"`
-3. A callback that runs: `DELETE FROM enrollments WHERE id = ?`
+3. A callback that runs: `DELETE FROM enrollments WHERE id = %s`
 
-Add these to the enrollment form. Don't forget `conn.commit()` and `refresh_enrollments()`.
+Add these to the enrollment form. Don't forget to call `refresh_enrollments()`.
 
-> **Check:** After dropping an enrollment, that row should disappear from the enrollment list, but the student and course should still exist in their own tables.
+> **Check:** After dropping an enrollment, that row should disappear from the enrollment list, but the student and course should still exist in their own tables. You can also verify in Retool that the row is gone.
 
 ### Challenge 2: Student Schedule View
 
-Create a new form that lets you pick a **student** from a dropdown and see all the courses they are taking, along with the total number of credits. You will need a JOIN similar to Cell 6 from Part 3, plus a `SUM(courses.credits)` query.
+Create a new form that lets you pick a **student** from a dropdown and see all the courses they are taking, along with the total number of credits. You will need a JOIN similar to Cell 8 from Part 3, plus a `SUM(courses.credits)` query.
 
 > **Check:** If Alice is enrolled in BMIS 490 (3 credits) and BMIS 340 (3 credits), you should see both courses listed and "Total credits: 6" at the bottom.
 
@@ -674,15 +740,16 @@ find_unenrolled()
 
 Your notebook should contain:
 
-1. Three tables: `students`, `courses`, and `enrollments`
-2. A student form that can add students
-3. A course form that can add courses
-4. An enrollment form that can enroll students in courses (writing to the junction table)
-5. A course roster viewer that uses JOIN to display enrollment data
-6. At least two of the four challenges completed
-7. Several students, courses, and enrollments added to demonstrate everything works
+1. A connection to your **Retool PostgreSQL database** (via Colab Secrets — no hardcoded URLs!)
+2. Three tables: `students`, `courses`, and `enrollments`
+3. A student form that can add students
+4. A course form that can add courses
+5. An enrollment form that can enroll students in courses (writing to the junction table)
+6. A course roster viewer that uses JOIN to display enrollment data
+7. At least two of the four challenges completed
+8. Several students, courses, and enrollments added to demonstrate everything works
 
-Take screenshots showing your enrollment manager and course roster viewer in action, and submit them.
+Verify your data is in Retool, then take screenshots showing your enrollment manager and course roster viewer in action, and submit them.
 
 ---
 
@@ -694,15 +761,15 @@ Take screenshots showing your enrollment manager and course roster viewer in act
 | Lab 2 | API calls to fill form options | How to get data from an external source |
 | Lab 3 | A SQLite database | How data is stored, structured, and queried (the **data layer**) |
 | Lab 3.5 | A cloud PostgreSQL database | How databases persist independently of your app |
-| Lab 4 | Forms connected to a multi-table database | **Many-to-many relationships** and how apps manage related data |
+| Lab 4 | Forms connected to a cloud multi-table database | **Many-to-many relationships** and real cloud persistence |
 
-You now understand the three-table pattern that powers most real applications. When you use Zagweb, Canvas, or Amazon, the same architecture is at work behind the scenes — entities in separate tables, connected by junction tables, brought together with JOINs.
+You now understand the three-table pattern that powers most real applications. When you use Zagweb, Canvas, or Amazon, the same architecture is at work behind the scenes — entities in separate tables, connected by junction tables, brought together with JOINs. And your data lives in the cloud, just like theirs does.
 
 ```
 What you built today:              What a real app looks like:
 
-  Form ←→ 3 Tables                   Form ←→ API ←→ 3+ Tables
-  (same notebook)                   (browser)  (server)  (database)
+  Form ←→ Cloud DB                   Form ←→ API ←→ Cloud DB
+  (Colab)  (Retool)                 (browser)  (server)  (cloud)
 ```
 
 Next, we'll put an **API** in between the form and the database, just like a real web application.
@@ -711,22 +778,43 @@ Next, we'll put an **API** in between the form and the database, just like a rea
 
 ## Quick Reference
 
+### Connecting to Your Database
+
+```python
+import psycopg2
+from google.colab import userdata
+
+db_url = userdata.get('DB_URL')   # From Colab Secrets — never hardcode this!
+conn = psycopg2.connect(db_url)
+conn.autocommit = True
+cursor = conn.cursor()
+```
+
+### SQLite vs PostgreSQL Cheat Sheet
+
+| What | SQLite | PostgreSQL |
+|------|--------|-----------|
+| Placeholder | `?` | `%s` |
+| Auto-increment ID | `INTEGER PRIMARY KEY AUTOINCREMENT` | `SERIAL PRIMARY KEY` |
+| Text type | `TEXT` | `VARCHAR(100)` |
+| Decimal type | `REAL` | `NUMERIC(3, 2)` |
+| Connection | `sqlite3.connect("file.db")` | `psycopg2.connect(url)` |
+| Data location | Local file (lost on restart) | Cloud server (persists forever) |
+
 ### Junction Table Pattern
 
 ```python
 # Create the junction table
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS enrollments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        course_id INTEGER NOT NULL,
-        FOREIGN KEY (student_id) REFERENCES students(id),
-        FOREIGN KEY (course_id) REFERENCES courses(id)
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER NOT NULL REFERENCES students(id),
+        course_id INTEGER NOT NULL REFERENCES courses(id)
     )
 """)
 
 # Add a relationship
-cursor.execute("INSERT INTO enrollments (student_id, course_id) VALUES (?, ?)", (1, 3))
+cursor.execute("INSERT INTO enrollments (student_id, course_id) VALUES (%s, %s)", (1, 3))
 
 # Query with JOIN to see the relationship in human-readable form
 cursor.execute("""

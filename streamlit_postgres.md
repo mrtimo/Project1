@@ -85,8 +85,11 @@ DB_URL = "postgresql://your_user:your_password@your_host:5432/your_db"
 
 ```python
 import psycopg2
+from google.colab import userdata
 
-conn = psycopg2.connect(DB_URL)
+db_url = userdata.get('DB_URL')
+
+conn = psycopg2.connect(db_url)
 cur = conn.cursor()
 
 cur.execute("""

@@ -1,7 +1,7 @@
 # Project: Using AI to Build a System
 
 **Format:** Individual  
-**Grading:** Pass / Fail  
+**Grading:** See Rubric Below
 **Example System**: Diaper Tracker (https://c2vbesypwfcpm3gsn6e6np.streamlit.app/)
 
 ---
@@ -350,9 +350,9 @@ A written version of your presentation reflection:
 
 ---
 
-## Grading Rubric (Pass / Fail)
+## Checklist
 
-To **pass**, your project must meet **all** of the following:
+Your project must meet **all** of the following:
 
 | Requirement | Criteria |
 |-------------|----------|

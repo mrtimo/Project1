@@ -11,7 +11,7 @@
 
 You will design and build a **Streamlit web application** backed by a **PostgreSQL database** that tracks something you care about. It can be anything — inventory for a small business, a personal book library, a volunteer scheduling system, a recipe manager, a pet adoption tracker — as long as it meets the requirements below.
 
-**If you're not sure what to build**, you are welcome to use the **Vanessa Behan Crisis Nursery diaper tracking** case that we worked with earlier in class. That system tracks approved parents, children in each family, diaper sizes, and distribution events. It's a solid example of a many-to-many relationship and a realistic nonprofit use case.
+See my example app (link above) for an example of what you can build. 
 
 Your goal is to demonstrate two things:
 

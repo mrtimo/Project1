@@ -2,6 +2,7 @@
 
 **Format:** Individual  
 **Grading:** See Rubric Below
+
 **Example System**: Diaper Tracker (https://c2vbesypwfcpm3gsn6e6np.streamlit.app/)
 
 ---

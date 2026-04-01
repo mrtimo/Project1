@@ -349,13 +349,14 @@ Follow these steps carefully to get your code into a GitHub repository.
 
 1. You should now be on your new repository's page. Click the **"Add file"** dropdown button, then select **"Upload files"**.
 2. Open your `streamlit-student-app` folder on your computer in a file explorer window.
-3. **Drag and drop** the following files and folder from your computer into the upload area on GitHub:
+3. ***THE NEXT STEP IS ESSENTIAL***. YOU MUST DRAG AND DROP your files, otherwise it will not upload the folder!!!!
+4. **Drag and drop** the following files and folder from your computer into the upload area on GitHub:
    - `streamlit_app.py`
    - `requirements.txt`
    - `pages/` folder (drag the entire folder — it will include `1_Add_Student.py` inside it)
-4. Scroll down to the bottom of the page. You'll see a "Commit changes" section.
-5. You can leave the default commit message or type something like `Initial commit - student enrollment app`.
-6. Click the green **"Commit changes"** button.
+5. Scroll down to the bottom of the page. You'll see a "Commit changes" section.
+6. You can leave the default commit message or type something like `Initial commit - student enrollment app`.
+7. Click the green **"Commit changes"** button.
 
 > **⚠️ Don't forget to press Commit!** Your files are not saved to the repository until you click the Commit button. If you navigate away without committing, you'll need to upload again.
 

@@ -749,4 +749,59 @@ If you finish early, try one or more of these:
 - **Add a new tool**: Create a `lookup_product` function that calls `https://dummyjson.com/products/search?q={query}` and wire it into the classifier as a `PRODUCT_INFO` category.
 - **Improve the classifier**: Add few-shot examples to the classifier prompt to make it more accurate.
 - **Add more documents**: Upload additional `.md` files to the `docs/` folder, rebuild ChromaDB, and test that RAG finds the right answers.
-- **Build a simple UI**: Use `ipywidgets` or `gradio` to create a chat interface in Colab instead of the text input loop.
+- **Deploy to Hugging Face Spaces**: Follow the instructions below to get a permanent public URL for your bot.
+
+---
+
+## Bonus: Deploy to Hugging Face Spaces
+
+You can host your bot for free on Hugging Face Spaces so anyone can use it from a permanent URL — no Colab notebook required.
+
+### What you need
+
+Two files are provided with this lab:
+
+- `app.py` — your entire bot consolidated into one Python file
+- `requirements.txt` — the Python packages Hugging Face needs to install
+
+### Steps
+
+1. **Create a Hugging Face account** at [huggingface.co](https://huggingface.co) (free)
+
+2. **Create a new Space**
+   - Go to [huggingface.co/new-space](https://huggingface.co/new-space)
+   - Give it a name (e.g., `customer-support-bot`)
+   - Select **Gradio** as the SDK
+   - Choose **Public** (so others can see it) or **Private**
+   - Click **Create Space**
+
+3. **Add your API key as a secret**
+   - In your new Space, go to **Settings → Variables and secrets**
+   - Click **New secret**
+   - Name: `GOOGLE_API_KEY`
+   - Value: paste your Gemini API key
+   - This keeps your key private — it won't be visible in your code
+
+4. **Upload your files**
+   - Upload `app.py` and `requirements.txt` to the root of the Space repo
+   - Create a `docs/` folder and upload your `.md` files into it
+   - Optionally upload `customer_support_tickets1.csv` (if you don't, the app creates sample data)
+
+   Your Space repo should look like:
+   ```
+   your-space/
+   ├── app.py
+   ├── requirements.txt
+   ├── customer_support_tickets1.csv   (optional)
+   └── docs/
+       └── spokane_recycling.md        (your .md files)
+   ```
+
+5. **Wait for it to build** — Hugging Face will install dependencies and start your app. This takes 2-3 minutes. Once it's live, you'll see the Gradio chat interface at `https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE_NAME`.
+
+### What's different from the Colab version?
+
+The `app.py` file is the same code from this lab, with two small changes:
+
+- **API key**: reads from `os.environ["GOOGLE_API_KEY"]` instead of Colab's `userdata.get()`, since Hugging Face stores secrets as environment variables
+- **Fallback data**: if the CSV or docs folder are missing, it creates sample data automatically so the app doesn't crash on first launch

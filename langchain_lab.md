@@ -119,7 +119,7 @@ If you get an error, double-check that your secret name is exactly `GOOGLE_API_K
 
 ## Part 3: Set Up the Support Ticket Data
 
-In a real company, ticket data would live in a database. For this lab, we'll use a CSV file that has been provided to you called `customer_support_tickets1.csv`.
+In a real company, ticket data would live in a database. For this lab, we'll use a CSV file that has been provided to you called `customer_support_tickets1.csv`. Here it is: https://github.com/mrtimo/Project1/blob/main/customer_support_tickets1.csv
 
 ### Step 3a: Upload the ticket data file
 

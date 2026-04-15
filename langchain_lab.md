@@ -261,6 +261,8 @@ This is the most powerful piece. We'll load markdown documents into a vector dat
 1. In the Colab sidebar, click the **📁 folder icon**
 2. Create a new folder called `docs`
 3. Upload your recycling/sustainability `.md` files (e.g., `spokane_recycling.md`) into the `docs` folder
+4. Here is an example file with recycling info for spokane: https://github.com/mrtimo/Project1/blob/main/recycle.md
+5. 
 
 You can also upload files programmatically:
 
